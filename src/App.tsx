@@ -1,37 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 
-// Brazilian ring sizes (inner circumference in mm)
-// Diameter = circumference / π
-const RING_SIZES = [
-  { size: 10, circ: 10, diam: 10 / Math.PI },
-  { size: 11, circ: 11, diam: 11 / Math.PI },
-  { size: 12, circ: 12, diam: 12 / Math.PI },
-  { size: 13, circ: 13, diam: 13 / Math.PI },
-  { size: 14, circ: 14, diam: 14 / Math.PI },
-  { size: 15, circ: 15, diam: 15 / Math.PI },
-  { size: 16, circ: 16, diam: 16 / Math.PI },
-  { size: 17, circ: 17, diam: 17 / Math.PI },
-  { size: 18, circ: 18, diam: 18 / Math.PI },
-  { size: 19, circ: 19, diam: 19 / Math.PI },
-  { size: 20, circ: 20, diam: 20 / Math.PI },
-  { size: 21, circ: 21, diam: 21 / Math.PI },
-  { size: 22, circ: 22, diam: 22 / Math.PI },
-  { size: 23, circ: 23, diam: 23 / Math.PI },
-  { size: 24, circ: 24, diam: 24 / Math.PI },
-  { size: 25, circ: 25, diam: 25 / Math.PI },
-  { size: 26, circ: 26, diam: 26 / Math.PI },
-  { size: 27, circ: 27, diam: 27 / Math.PI },
-  { size: 28, circ: 28, diam: 28 / Math.PI },
-  { size: 29, circ: 29, diam: 29 / Math.PI },
-  { size: 30, circ: 30, diam: 30 / Math.PI },
-  { size: 31, circ: 31, diam: 31 / Math.PI },
-  { size: 32, circ: 32, diam: 32 / Math.PI },
-  { size: 33, circ: 33, diam: 33 / Math.PI },
-  { size: 34, circ: 34, diam: 34 / Math.PI },
-  { size: 35, circ: 35, diam: 35 / Math.PI },
-]
+// Brazilian ring sizes — proper diameters (mm) and circumferences (mm)
+// Formula: diameter = 12.5 + (size - 10) * 0.5
+// Circumference = diameter * π
+const RING_SIZES = Array.from({ length: 26 }, (_, i) => {
+  const size = 10 + i
+  const diam = 12.5 + (size - 10) * 0.5
+  const circ = diam * Math.PI
+  return { size, diam, circ }
+})
 
-// Conversion table: Brazilian size -> US, UK, EU, JP/CN
+// Conversion table: Brazilian size → US, UK, EU, JP/CN
 const CONVERSION_TABLE: Record<number, { us: number | string; uk: string; eu: number; jp: number }> = {
   10: { us: 5, uk: 'J', eu: 49, jp: 9 },
   11: { us: 5.5, uk: 'K', eu: 50, jp: 10 },
@@ -61,24 +40,98 @@ const CONVERSION_TABLE: Record<number, { us: number | string; uk: string; eu: nu
   35: { us: 17.5, uk: 'Z9', eu: 76, jp: 34 },
 }
 
-type Step = 'tutorial' | 'calibration' | 'measurement'
+function estimatePPI(): number {
+  const dpr = window.devicePixelRatio || 1
+  const ua = navigator.userAgent
+  const sw = window.screen.width
+  const sh = window.screen.height
+
+  // iPhones — known PPI values by model range
+  if (/iPhone/.test(ua)) {
+    if (dpr === 3) {
+      // iPhone 12/13/14/15/16 Pro/Pro Max, XS/X/11 Pro
+      if (sw === 430 || sw === 393) return 460 // Pro Max, Pro
+      if (sw === 390) return 476 // iPhone 12/13 mini
+      return 460
+    }
+    if (dpr === 2) {
+      // iPhone SE, XR, 11, older
+      if (sw === 414) return 326 // iPhone XR/11
+      if (sw === 375) return 326 // iPhone SE (2nd/3rd), 8, etc.
+      return 326
+    }
+    return 326
+  }
+
+  // iPads
+  if (/iPad/.test(ua) || (sw === 1024 && dpr === 2) || (sw === 834 && dpr === 2)) {
+    return 264
+  }
+
+  // Android phones
+  if (/Android/.test(ua)) {
+    // Small screens = phone
+    if (Math.min(sw, sh) < 600) {
+      if (dpr >= 3.5) return 520
+      if (dpr >= 3) return 400
+      if (dpr >= 2.5) return 360
+      if (dpr === 2) return 300
+      return 240
+    }
+    // Larger screens = tablet
+    if (Math.min(sw, sh) < 900) {
+      return 264
+    }
+  }
+
+  // Desktop / laptop
+  if (dpr === 1) return 96
+  if (dpr === 2) {
+    // Retina Macs
+    if (/Mac/.test(ua)) {
+      // 13-inch MacBook Air/Pro = 227 PPI, 14/16-inch = 254 PPI
+      if (sw >= 1512) return 254
+      return 227
+    }
+    return 150
+  }
+
+  return 96 * dpr
+}
+
+function getInitialScale(): number {
+  const saved = localStorage.getItem('ringSizerScale')
+  if (saved) return parseFloat(saved)
+
+  const ppi = estimatePPI()
+  // pixels per mm = PPI / 25.4
+  const pxPerMm = ppi / 25.4
+  return pxPerMm
+}
+
+type Step = 'tutorial' | 'measurement'
 
 export default function App() {
   const [step, setStep] = useState<Step>('tutorial')
   const [tutorialPage, setTutorialPage] = useState(0)
-  const [pixelsPerCm, setPixelsPerCm] = useState<number | null>(null)
+  const [pxPerMm, setPxPerMm] = useState<number>(getInitialScale())
   const [selectedSize, setSelectedSize] = useState<number | null>(null)
+  const [showCalibrate, setShowCalibrate] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('ringSizerSeenTutorial')
-    if (saved === 'true') {
-      setStep('calibration')
+    const savedTutorial = localStorage.getItem('ringSizerSeenTutorial')
+    if (savedTutorial === 'true') {
+      setStep('measurement')
     }
   }, [])
 
+  useEffect(() => {
+    localStorage.setItem('ringSizerScale', pxPerMm.toString())
+  }, [pxPerMm])
+
   const finishTutorial = () => {
     localStorage.setItem('ringSizerSeenTutorial', 'true')
-    setStep('calibration')
+    setStep('measurement')
   }
 
   return (
@@ -86,7 +139,7 @@ export default function App() {
       <header className="bg-stone-900 text-stone-50 py-4 px-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold tracking-tight">💍 Ring Sizer</h1>
-          <span className="text-xs text-stone-400">Precise & Free</span>
+          <span className="text-xs text-stone-400">Precise &amp; Free</span>
         </div>
       </header>
 
@@ -98,21 +151,27 @@ export default function App() {
             onFinish={finishTutorial}
           />
         )}
-        {step === 'calibration' && (
-          <Calibration
-            onCalibrated={(ppc) => {
-              setPixelsPerCm(ppc)
-              setStep('measurement')
-            }}
-          />
-        )}
-        {step === 'measurement' && pixelsPerCm !== null && (
-          <Measurement
-            pixelsPerCm={pixelsPerCm}
-            selectedSize={selectedSize}
-            onSelectSize={setSelectedSize}
-            onRecalibrate={() => setStep('calibration')}
-          />
+        {step === 'measurement' && (
+          <>
+            {showCalibrate && (
+              <Calibration
+                estimatedPpi={estimatePPI()}
+                pxPerMm={pxPerMm}
+                onCalibrated={(newPxPerMm) => {
+                  setPxPerMm(newPxPerMm)
+                  setShowCalibrate(false)
+                }}
+                onCancel={() => setShowCalibrate(false)}
+              />
+            )}
+            <Measurement
+              pxPerMm={pxPerMm}
+              onScaleChange={setPxPerMm}
+              selectedSize={selectedSize}
+              onSelectSize={setSelectedSize}
+              onOpenCalibrate={() => setShowCalibrate(true)}
+            />
+          </>
         )}
       </div>
     </div>
@@ -137,7 +196,7 @@ function Tutorial({
             This app helps you find your exact ring size so you can shop online with confidence.
           </p>
           <p className="text-stone-600 leading-relaxed mt-3">
-            The secret is calibration: we adjust your device's scale so the circles on screen are exactly the same size as a real ring.
+            We automatically detect your screen size, then you can fine-tune if needed. Place your finger over the circles — the one that fits is your size!
           </p>
         </>
       ),
@@ -147,10 +206,13 @@ function Tutorial({
       content: (
         <>
           <p className="text-stone-600 leading-relaxed">
-            <strong>1. Calibration:</strong> You'll adjust a virtual ruler on screen to match a real object of known size (like a credit card).
+            <strong>1. Auto-detect:</strong> We estimate your device's screen density so circles appear at real-world size.
           </p>
           <p className="text-stone-600 leading-relaxed mt-3">
-            <strong>2. Measurement:</strong> Place your finger over the circles on screen. The one that fits perfectly is your size!
+            <strong>2. Fine-tune:</strong> Use the slider to adjust if the circles look too big or small. You can also calibrate with a credit card for maximum accuracy.
+          </p>
+          <p className="text-stone-600 leading-relaxed mt-3">
+            <strong>3. Measure:</strong> Place your finger over the circles. The one that fits perfectly is your size!
           </p>
         </>
       ),
@@ -162,8 +224,9 @@ function Tutorial({
           <ul className="list-disc list-inside text-stone-600 space-y-2 leading-relaxed">
             <li>Use the app in <em>landscape</em> orientation for better accuracy.</li>
             <li>Remove thick phone cases — they lift your finger away from the screen.</li>
-            <li>Measure your finger in the evening, when it's slightly swollen.</li>
-            <li>Don't force your finger — the ring should slide on with gentle resistance.</li>
+            <li>Measure your finger in the evening, when it is slightly swollen.</li>
+            <li>Do not force your finger — the ring should slide on with gentle resistance.</li>
+            <li>Compare with a ring you already own by placing it on the circles.</li>
           </ul>
         </>
       ),
@@ -218,63 +281,60 @@ function Tutorial({
 }
 
 function Calibration({
+  estimatedPpi,
+  pxPerMm,
   onCalibrated,
+  onCancel,
 }: {
-  onCalibrated: (pixelsPerCm: number) => void
+  estimatedPpi: number
+  pxPerMm: number
+  onCalibrated: (pxPerMm: number) => void
+  onCancel: () => void
 }) {
-  const [method, setMethod] = useState<'credit' | 'ruler' | 'screen'>('credit')
-  const [creditWidthMm] = useState(85.6)
-  const [rulerCm, setRulerCm] = useState(5)
-  const [screenDPI, setScreenDPI] = useState(96)
-  const rulerRef = useRef<HTMLDivElement>(null)
+  const [method, setMethod] = useState<'credit' | 'ruler'>('credit')
   const [sliderVal, setSliderVal] = useState(100)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const rulerRef = useRef<HTMLDivElement>(null)
+  const [rulerCm, setRulerCm] = useState(5)
 
-  const handleCreditCalibration = () => {
+  const basePxPerMm = pxPerMm
+
+  const getCardStyle = (): React.CSSProperties => {
+    const mm = 85.6 // credit card width
+    const basePx = mm * basePxPerMm * (sliderVal / 100)
+    return { width: `${basePx}px`, minWidth: '120px' }
+  }
+
+  const getRulerStyle = (): React.CSSProperties => {
+    const mm = rulerCm * 10
+    const basePx = mm * basePxPerMm * (sliderVal / 100)
+    return { width: `${basePx}px`, minWidth: '120px' }
+  }
+
+  const handleCreditCalibrate = () => {
+    if (!cardRef.current) return
+    const rect = cardRef.current.getBoundingClientRect()
+    const newPxPerMm = rect.width / 85.6
+    onCalibrated(newPxPerMm)
+  }
+
+  const handleRulerCalibrate = () => {
     if (!rulerRef.current) return
     const rect = rulerRef.current.getBoundingClientRect()
-    const pixels = rect.width
-    const mm = creditWidthMm
-    const ppc = pixels / (mm / 10)
-    onCalibrated(ppc)
+    const newPxPerMm = rect.width / (rulerCm * 10)
+    onCalibrated(newPxPerMm)
   }
-
-  const handleRulerCalibration = () => {
-    if (!rulerRef.current) return
-    const rect = rulerRef.current.getBoundingClientRect()
-    const pixels = rect.width
-    const ppc = pixels / rulerCm
-    onCalibrated(ppc)
-  }
-
-  const handleScreenCalibration = () => {
-    const ppc = screenDPI / 2.54
-    onCalibrated(ppc)
-  }
-
-  const getRulerStyle = () => {
-    if (method === 'credit') {
-      return { width: `${creditWidthMm * (sliderVal / 100)}px` }
-    }
-    if (method === 'ruler') {
-      return { width: `${rulerCm * 37.8 * (sliderVal / 100)}px` }
-    }
-    return { width: '200px' }
-  }
-
-  useEffect(() => {
-    setSliderVal(100)
-  }, [method])
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8">
-      <h2 className="text-2xl font-bold text-stone-900 mb-2">Screen Calibration</h2>
-      <p className="text-stone-500 mb-6">
-        Choose the most convenient method to calibrate your device's scale.
+    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
+      <h2 className="text-2xl font-bold text-stone-900 mb-2">Calibrate Screen</h2>
+      <p className="text-stone-500 mb-4">
+        Estimated screen density: <strong>{estimatedPpi} PPI</strong>. Adjust below for accuracy.
       </p>
 
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
-          onClick={() => setMethod('credit')}
+          onClick={() => { setMethod('credit'); setSliderVal(100) }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             method === 'credit'
               ? 'bg-stone-900 text-white'
@@ -284,71 +344,68 @@ function Calibration({
           💳 Credit Card
         </button>
         <button
-          onClick={() => setMethod('ruler')}
+          onClick={() => { setMethod('ruler'); setSliderVal(100) }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             method === 'ruler'
               ? 'bg-stone-900 text-white'
               : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
           }`}
         >
-          📏 Real Ruler
-        </button>
-        <button
-          onClick={() => setMethod('screen')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            method === 'screen'
-              ? 'bg-stone-900 text-white'
-              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-          }`}
-        >
-          🖥️ Device Specs
+          📏 Ruler
         </button>
       </div>
 
       {method === 'credit' && (
         <div>
-          <p className="text-stone-600 mb-4">
-            Grab a credit or debit card and adjust the rectangle below so it has{' '}
-            <strong>exactly the same size</strong> as your real card.
+          <p className="text-stone-600 mb-4 text-sm">
+            Place a real credit/debit card over the rectangle below. Adjust the slider until they match exactly.
           </p>
           <div className="mb-6 p-6 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-center overflow-x-auto">
             <div
-              ref={rulerRef}
-              style={getRulerStyle()}
-              className="h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg shadow-lg flex items-center justify-center text-white font-bold text-sm select-none"
+              ref={cardRef}
+              style={getCardStyle()}
+              className="h-32 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl shadow-lg flex flex-col items-center justify-center text-white font-bold select-none"
             >
-              <span className="opacity-90">CARD</span>
+              <span className="text-lg opacity-90">CREDIT</span>
+              <span className="text-xs opacity-70 mt-1">85.6 mm</span>
             </div>
           </div>
           <label className="block text-sm font-medium text-stone-700 mb-2">
-            Adjust size: <span className="text-amber-600">{sliderVal}%</span>
+            Adjust: <span className="text-amber-600">{sliderVal}%</span>
           </label>
           <input
             type="range"
-            min={50}
-            max={150}
+            min={30}
+            max={200}
             value={sliderVal}
             onChange={(e) => setSliderVal(Number(e.target.value))}
             className="w-full mb-6 accent-amber-500"
           />
-          <button
-            onClick={handleCreditCalibration}
-            className="w-full px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors shadow-sm"
-          >
-            Confirm Calibration
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 px-4 py-3 rounded-xl bg-stone-200 text-stone-700 font-medium hover:bg-stone-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreditCalibrate}
+              className="flex-[2] px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              Confirm Calibration
+            </button>
+          </div>
         </div>
       )}
 
       {method === 'ruler' && (
         <div>
-          <p className="text-stone-600 mb-4">
-            Place a real ruler over the screen and adjust the segment below so it measures{' '}
-            <strong>exactly {rulerCm} cm</strong> on the ruler.
+          <p className="text-stone-600 mb-4 text-sm">
+            Place a real ruler over the segment below. Adjust the slider until they match exactly.
           </p>
           <div className="mb-4">
             <label className="block text-sm font-medium text-stone-700 mb-1">
-              Segment size (cm)
+              Segment length
             </label>
             <select
               value={rulerCm}
@@ -367,13 +424,13 @@ function Calibration({
               <div
                 ref={rulerRef}
                 style={getRulerStyle()}
-                className="h-12 bg-stone-900 rounded flex items-end justify-between px-1 pb-1"
+                className="h-14 bg-stone-900 rounded flex items-end justify-between px-1 pb-1"
               >
                 {Array.from({ length: rulerCm + 1 }).map((_, i) => (
                   <div
                     key={i}
                     className="w-px bg-stone-400"
-                    style={{ height: i % 5 === 0 ? '16px' : '8px' }}
+                    style={{ height: i % 5 === 0 ? '20px' : '10px' }}
                   />
                 ))}
               </div>
@@ -384,50 +441,30 @@ function Calibration({
             </div>
           </div>
           <label className="block text-sm font-medium text-stone-700 mb-2">
-            Fine-tune: <span className="text-amber-600">{sliderVal}%</span>
+            Adjust: <span className="text-amber-600">{sliderVal}%</span>
           </label>
           <input
             type="range"
-            min={50}
-            max={150}
+            min={30}
+            max={200}
             value={sliderVal}
             onChange={(e) => setSliderVal(Number(e.target.value))}
             className="w-full mb-6 accent-amber-500"
           />
-          <button
-            onClick={handleRulerCalibration}
-            className="w-full px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors shadow-sm"
-          >
-            Confirm Calibration
-          </button>
-        </div>
-      )}
-
-      {method === 'screen' && (
-        <div>
-          <p className="text-stone-600 mb-4">
-            Enter your device's pixel density (DPI/PPI). You can find this in the manufacturer's specs.
-          </p>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              Device DPI / PPI
-            </label>
-            <input
-              type="number"
-              value={screenDPI}
-              onChange={(e) => setScreenDPI(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800"
-            />
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 px-4 py-3 rounded-xl bg-stone-200 text-stone-700 font-medium hover:bg-stone-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRulerCalibrate}
+              className="flex-[2] px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              Confirm Calibration
+            </button>
           </div>
-          <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200 text-sm text-amber-800">
-            <strong>Tip:</strong> iPhones are usually ~326–460 DPI. Androids vary from 300 to 500+ DPI. Tablets are typically ~264 DPI.
-          </div>
-          <button
-            onClick={handleScreenCalibration}
-            className="w-full px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-colors shadow-sm"
-          >
-            Confirm Calibration
-          </button>
         </div>
       )}
     </div>
@@ -435,27 +472,70 @@ function Calibration({
 }
 
 function Measurement({
-  pixelsPerCm,
+  pxPerMm,
+  onScaleChange,
   selectedSize,
   onSelectSize,
-  onRecalibrate,
+  onOpenCalibrate,
 }: {
-  pixelsPerCm: number
+  pxPerMm: number
+  onScaleChange: (v: number) => void
   selectedSize: number | null
   onSelectSize: (size: number) => void
-  onRecalibrate: () => void
+  onOpenCalibrate: () => void
 }) {
   const [displayMode, setDisplayMode] = useState<'grid' | 'single'>('grid')
   const [currentIndex, setCurrentIndex] = useState(12)
   const [showTable, setShowTable] = useState(false)
+  const [scaleSlider, setScaleSlider] = useState(100)
 
   const selectedRing = RING_SIZES.find((r) => r.size === selectedSize)
   const conversion = selectedSize ? CONVERSION_TABLE[selectedSize] : null
 
-  const pxForMm = (mm: number) => (mm / 10) * pixelsPerCm
+  // Effective scale combines the base pxPerMm with the user's real-time slider
+  const effectivePxPerMm = pxPerMm * (scaleSlider / 100)
+
+  const pxForMm = (mm: number) => mm * effectivePxPerMm
+
+  // When scaleSlider changes, we update the base scale after a debounce (handled via useEffect)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (scaleSlider !== 100) {
+        onScaleChange(pxPerMm * (scaleSlider / 100))
+        setScaleSlider(100)
+      }
+    }, 500)
+    return () => clearTimeout(timeout)
+  }, [scaleSlider, pxPerMm, onScaleChange])
 
   return (
     <div>
+      {/* Scale fine-tune bar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium text-stone-700 whitespace-nowrap">🔧 Scale:</span>
+          <input
+            type="range"
+            min={50}
+            max={150}
+            value={scaleSlider}
+            onChange={(e) => setScaleSlider(Number(e.target.value))}
+            className="flex-1 min-w-[120px] accent-amber-500"
+          />
+          <span className="text-sm font-mono text-stone-500 w-12 text-right">{scaleSlider}%</span>
+          <button
+            onClick={onOpenCalibrate}
+            className="px-3 py-1.5 rounded-lg bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition-colors whitespace-nowrap"
+          >
+            Calibrate
+          </button>
+        </div>
+        <p className="text-xs text-stone-400 mt-2">
+          If circles look too small or big, adjust above. For best accuracy, use Calibrate with a credit card.
+        </p>
+      </div>
+
+      {/* Measurement circles */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
@@ -491,7 +571,7 @@ function Measurement({
         {displayMode === 'grid' ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
             {RING_SIZES.map((ring) => {
-              const px = pxForMm(ring.diam * 10)
+              const px = pxForMm(ring.diam)
               const isSelected = selectedSize === ring.size
               return (
                 <button
@@ -553,7 +633,7 @@ function Measurement({
 
             {(() => {
               const ring = RING_SIZES[currentIndex]
-              const px = pxForMm(ring.diam * 10)
+              const px = pxForMm(ring.diam)
               const isSelected = selectedSize === ring.size
               return (
                 <button
@@ -571,7 +651,7 @@ function Measurement({
                       minWidth: '40px',
                       minHeight: '40px',
                     }}
-                    className={`rounded-full border-3 ${
+                    className={`rounded-full border-[3px] ${
                       isSelected ? 'border-amber-500' : 'border-stone-500'
                     }`}
                   />
@@ -584,7 +664,7 @@ function Measurement({
                       {ring.size}
                     </span>
                     <p className="text-xs text-stone-400 mt-1">
-                      {ring.diam.toFixed(2)} mm Ø
+                      {ring.diam.toFixed(1)} mm Ø
                     </p>
                   </div>
                 </button>
@@ -594,6 +674,7 @@ function Measurement({
         )}
       </div>
 
+      {/* Result card */}
       {selectedRing && conversion && (
         <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 md:p-8 mb-6">
           <h3 className="text-lg font-bold text-amber-900 mb-4">
@@ -602,11 +683,11 @@ function Measurement({
           <div className="grid grid-cols-2 gap-4 text-sm text-amber-800 mb-4">
             <div>
               <span className="text-amber-600">Inner Diameter:</span>
-              <p className="font-semibold">{selectedRing.diam.toFixed(2)} mm</p>
+              <p className="font-semibold">{selectedRing.diam.toFixed(1)} mm</p>
             </div>
             <div>
               <span className="text-amber-600">Circumference:</span>
-              <p className="font-semibold">{selectedRing.circ} mm</p>
+              <p className="font-semibold">{selectedRing.circ.toFixed(1)} mm</p>
             </div>
           </div>
 
@@ -634,6 +715,7 @@ function Measurement({
         </div>
       )}
 
+      {/* Full conversion table */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
         <button
           onClick={() => setShowTable(!showTable)}
@@ -673,7 +755,7 @@ function Measurement({
                       <td className="py-2 pr-4 text-stone-600">{conv.uk}</td>
                       <td className="py-2 pr-4 text-stone-600">{conv.eu}</td>
                       <td className="py-2 pr-4 text-stone-600">{conv.jp}</td>
-                      <td className="py-2 text-stone-600">{ring.diam.toFixed(2)}</td>
+                      <td className="py-2 text-stone-600">{ring.diam.toFixed(1)}</td>
                     </tr>
                   )
                 })}
@@ -682,13 +764,6 @@ function Measurement({
           </div>
         )}
       </div>
-
-      <button
-        onClick={onRecalibrate}
-        className="w-full px-6 py-3 rounded-xl bg-stone-200 text-stone-700 font-medium hover:bg-stone-300 transition-colors"
-      >
-        Recalibrate Screen
-      </button>
     </div>
   )
 }
