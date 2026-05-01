@@ -12,7 +12,10 @@ const RING_SIZES = Array.from({ length: 26 }, (_, i) => {
 })
 
 // Conversion table: Brazilian size → US, UK, EU, JP/CN
-const CONVERSION_TABLE: Record<number, { us: number | string; uk: string; eu: number; jp: number }> = {
+const CONVERSION_TABLE: Record<
+  number,
+  { us: number | string; uk: string; eu: number; jp: number }
+> = {
   10: { us: 5, uk: 'J', eu: 49, jp: 9 },
   11: { us: 5.5, uk: 'K', eu: 50, jp: 10 },
   12: { us: 6, uk: 'L', eu: 51, jp: 11 },
@@ -65,7 +68,11 @@ function estimatePPI(): number {
   }
 
   // iPads
-  if (/iPad/.test(ua) || (sw === 1024 && dpr === 2) || (sw === 834 && dpr === 2)) {
+  if (
+    /iPad/.test(ua) ||
+    (sw === 1024 && dpr === 2) ||
+    (sw === 834 && dpr === 2)
+  ) {
     return 264
   }
 
@@ -123,13 +130,15 @@ export default function App() {
   return (
     <AdLayout>
       <header className="bg-stone-900 text-stone-50 py-4 px-6">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">💍 Ring Sizer</h1>
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <h1 className="text-lg font-semibold tracking-tight">
+            💍 Ring Sizer
+          </h1>
           <span className="text-xs text-stone-400">Precise &amp; Free</span>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-3xl mx-auto px-4 py-6">
         {step === 'tutorial' && (
           <Tutorial
             page={tutorialPage}
@@ -179,10 +188,13 @@ function Tutorial({
       content: (
         <>
           <p className="text-stone-600 leading-relaxed">
-            This app helps you find your exact ring size so you can shop online with confidence.
+            This app helps you find your exact ring size so you can shop online
+            with confidence.
           </p>
           <p className="text-stone-600 leading-relaxed mt-3">
-            We automatically detect your screen size, then you can fine-tune if needed. Place your finger over the circles — the one that fits is your size!
+            We automatically detect your screen size, then you can fine-tune if
+            needed. Place your finger over the circles — the one that fits is
+            your size!
           </p>
         </>
       ),
@@ -192,13 +204,17 @@ function Tutorial({
       content: (
         <>
           <p className="text-stone-600 leading-relaxed">
-            <strong>1. Auto-detect:</strong> We estimate your device's screen density so circles appear at real-world size.
+            <strong>1. Auto-detect:</strong> We estimate your device's screen
+            density so circles appear at real-world size.
           </p>
           <p className="text-stone-600 leading-relaxed mt-3">
-            <strong>2. Fine-tune:</strong> Use the slider to adjust if the circles look too big or small. You can also calibrate with a credit card for maximum accuracy.
+            <strong>2. Fine-tune:</strong> Use the slider to adjust if the
+            circles look too big or small. You can also calibrate with a credit
+            card for maximum accuracy.
           </p>
           <p className="text-stone-600 leading-relaxed mt-3">
-            <strong>3. Measure:</strong> Place your finger over the circles. The one that fits perfectly is your size!
+            <strong>3. Measure:</strong> Place your finger over the circles. The
+            one that fits perfectly is your size!
           </p>
         </>
       ),
@@ -208,11 +224,23 @@ function Tutorial({
       content: (
         <>
           <ul className="list-disc list-inside text-stone-600 space-y-2 leading-relaxed">
-            <li>Use the app in <em>landscape</em> orientation for better accuracy.</li>
-            <li>Remove thick phone cases — they lift your finger away from the screen.</li>
-            <li>Measure your finger in the evening, when it is slightly swollen.</li>
-            <li>Do not force your finger — the ring should slide on with gentle resistance.</li>
-            <li>Compare with a ring you already own by placing it on the circles.</li>
+            <li>
+              Use the app in <em>landscape</em> orientation for better accuracy.
+            </li>
+            <li>
+              Remove thick phone cases — they lift your finger away from the
+              screen.
+            </li>
+            <li>
+              Measure your finger in the evening, when it is slightly swollen.
+            </li>
+            <li>
+              Do not force your finger — the ring should slide on with gentle
+              resistance.
+            </li>
+            <li>
+              Compare with a ring you already own by placing it on the circles.
+            </li>
           </ul>
         </>
       ),
@@ -313,14 +341,20 @@ function Calibration({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
-      <h2 className="text-2xl font-bold text-stone-900 mb-2">Calibrate Screen</h2>
+      <h2 className="text-2xl font-bold text-stone-900 mb-2">
+        Calibrate Screen
+      </h2>
       <p className="text-stone-500 mb-4">
-        Estimated screen density: <strong>{estimatedPpi} PPI</strong>. Adjust below for accuracy.
+        Estimated screen density: <strong>{estimatedPpi} PPI</strong>. Adjust
+        below for accuracy.
       </p>
 
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
-          onClick={() => { setMethod('credit'); setSliderVal(100) }}
+          onClick={() => {
+            setMethod('credit')
+            setSliderVal(100)
+          }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             method === 'credit'
               ? 'bg-stone-900 text-white'
@@ -330,7 +364,10 @@ function Calibration({
           💳 Credit Card
         </button>
         <button
-          onClick={() => { setMethod('ruler'); setSliderVal(100) }}
+          onClick={() => {
+            setMethod('ruler')
+            setSliderVal(100)
+          }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             method === 'ruler'
               ? 'bg-stone-900 text-white'
@@ -344,7 +381,8 @@ function Calibration({
       {method === 'credit' && (
         <div>
           <p className="text-stone-600 mb-4 text-sm">
-            Place a real credit/debit card over the rectangle below. Adjust the slider until they match exactly.
+            Place a real credit/debit card over the rectangle below. Adjust the
+            slider until they match exactly.
           </p>
           <div className="mb-6 p-6 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-center overflow-x-auto">
             <div
@@ -387,7 +425,8 @@ function Calibration({
       {method === 'ruler' && (
         <div>
           <p className="text-stone-600 mb-4 text-sm">
-            Place a real ruler over the segment below. Adjust the slider until they match exactly.
+            Place a real ruler over the segment below. Adjust the slider until
+            they match exactly.
           </p>
           <div className="mb-4">
             <label className="block text-sm font-medium text-stone-700 mb-1">
@@ -514,7 +553,9 @@ function Measurement({
       {/* Scale fine-tune bar */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 mb-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-stone-700 whitespace-nowrap">🔧 Scale:</span>
+          <span className="text-sm font-medium text-stone-700 whitespace-nowrap">
+            🔧 Scale:
+          </span>
           <input
             type="range"
             min={30}
@@ -525,7 +566,9 @@ function Measurement({
             onTouchEnd={handleScaleRelease}
             className="flex-1 min-w-[120px] accent-amber-500"
           />
-          <span className="text-sm font-mono text-stone-500 w-12 text-right">{scaleSlider}%</span>
+          <span className="text-sm font-mono text-stone-500 w-12 text-right">
+            {scaleSlider}%
+          </span>
           <button
             onClick={onOpenCalibrate}
             className="px-3 py-1.5 rounded-lg bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition-colors whitespace-nowrap"
@@ -534,7 +577,8 @@ function Measurement({
           </button>
         </div>
         <p className="text-xs text-stone-400 mt-2">
-          If circles look too small or big, adjust above. For best accuracy, use Calibrate with a credit card.
+          If circles look too small or big, adjust above. For best accuracy, use
+          Calibrate with a credit card.
         </p>
       </div>
 
@@ -542,7 +586,9 @@ function Measurement({
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-stone-900">Measure Your Finger</h2>
+            <h2 className="text-2xl font-bold text-stone-900">
+              Measure Your Finger
+            </h2>
             <p className="text-stone-500 text-sm">
               Tap the circle that fits your finger perfectly.
             </p>
@@ -625,7 +671,9 @@ function Measurement({
               </span>
               <button
                 onClick={() =>
-                  setCurrentIndex(Math.min(RING_SIZES.length - 1, currentIndex + 1))
+                  setCurrentIndex(
+                    Math.min(RING_SIZES.length - 1, currentIndex + 1),
+                  )
                 }
                 disabled={currentIndex === RING_SIZES.length - 1}
                 className="w-10 h-10 rounded-full bg-stone-100 text-stone-700 font-bold hover:bg-stone-200 disabled:opacity-30 transition-colors"
@@ -695,23 +743,41 @@ function Measurement({
           </div>
 
           <div className="border-t border-amber-200 pt-4">
-            <p className="text-sm font-semibold text-amber-900 mb-2">International Sizes</p>
+            <p className="text-sm font-semibold text-amber-900 mb-2">
+              International Sizes
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
               <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">US / CA</p>
-                <p className="text-amber-900 font-bold text-lg">{conversion.us}</p>
+                <p className="text-amber-500 text-xs font-medium uppercase">
+                  US / CA
+                </p>
+                <p className="text-amber-900 font-bold text-lg">
+                  {conversion.us}
+                </p>
               </div>
               <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">UK / AU</p>
-                <p className="text-amber-900 font-bold text-lg">{conversion.uk}</p>
+                <p className="text-amber-500 text-xs font-medium uppercase">
+                  UK / AU
+                </p>
+                <p className="text-amber-900 font-bold text-lg">
+                  {conversion.uk}
+                </p>
               </div>
               <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">EU</p>
-                <p className="text-amber-900 font-bold text-lg">{conversion.eu}</p>
+                <p className="text-amber-500 text-xs font-medium uppercase">
+                  EU
+                </p>
+                <p className="text-amber-900 font-bold text-lg">
+                  {conversion.eu}
+                </p>
               </div>
               <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">JP / CN</p>
-                <p className="text-amber-900 font-bold text-lg">{conversion.jp}</p>
+                <p className="text-amber-500 text-xs font-medium uppercase">
+                  JP / CN
+                </p>
+                <p className="text-amber-900 font-bold text-lg">
+                  {conversion.jp}
+                </p>
               </div>
             </div>
           </div>
@@ -724,8 +790,12 @@ function Measurement({
           onClick={() => setShowTable(!showTable)}
           className="w-full flex items-center justify-between text-left"
         >
-          <h3 className="text-lg font-bold text-stone-900">📋 Full Conversion Chart</h3>
-          <span className="text-stone-500 text-xl">{showTable ? '−' : '+'}</span>
+          <h3 className="text-lg font-bold text-stone-900">
+            📋 Full Conversion Chart
+          </h3>
+          <span className="text-stone-500 text-xl">
+            {showTable ? '−' : '+'}
+          </span>
         </button>
 
         {showTable && (
@@ -753,12 +823,16 @@ function Measurement({
                         isSelected ? 'bg-amber-50' : 'hover:bg-stone-50'
                       }`}
                     >
-                      <td className="py-2 pr-4 font-semibold text-stone-800">{ring.size}</td>
+                      <td className="py-2 pr-4 font-semibold text-stone-800">
+                        {ring.size}
+                      </td>
                       <td className="py-2 pr-4 text-stone-600">{conv.us}</td>
                       <td className="py-2 pr-4 text-stone-600">{conv.uk}</td>
                       <td className="py-2 pr-4 text-stone-600">{conv.eu}</td>
                       <td className="py-2 pr-4 text-stone-600">{conv.jp}</td>
-                      <td className="py-2 text-stone-600">{ring.diam.toFixed(1)}</td>
+                      <td className="py-2 text-stone-600">
+                        {ring.diam.toFixed(1)}
+                      </td>
                     </tr>
                   )
                 })}
