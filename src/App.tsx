@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import AdLayout from './components/AdLayout'
 
 // Brazilian ring sizes — proper diameters (mm) and circumferences (mm)
 // Formula: diameter = 12.5 + (size - 10) * 0.5
@@ -120,7 +121,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
+    <AdLayout>
       <header className="bg-stone-900 text-stone-50 py-4 px-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold tracking-tight">💍 Ring Sizer</h1>
@@ -159,7 +160,7 @@ export default function App() {
           </>
         )}
       </div>
-    </div>
+    </AdLayout>
   )
 }
 
