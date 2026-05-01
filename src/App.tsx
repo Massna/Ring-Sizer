@@ -125,8 +125,15 @@ export default function App() {
     }
   }, [])
 
+  // Only save to localStorage if the value changed significantly (prevents noise)
+  const prevPxPerMmRef = useRef<number | null>(null)
   useEffect(() => {
+    if (prevPxPerMmRef.current !== null && Math.abs(pxPerMm - prevPxPerMmRef.current) < 0.001) {
+      // Value didn't change significantly, don't save
+      return
+    }
     localStorage.setItem('ringSizerScale', pxPerMm.toString())
+    prevPxPerMmRef.current = pxPerMm
   }, [pxPerMm])
 
   const finishTutorial = () => {
@@ -488,25 +495,40 @@ function Measurement({
   const [currentIndex, setCurrentIndex] = useState(12)
   const [showTable, setShowTable] = useState(false)
   const [scaleSlider, setScaleSlider] = useState(100)
+  const pxPerMmRef = useRef(pxPerMm)
+  const isDraggingRef = useRef(false)
 
   const selectedRing = RING_SIZES.find((r) => r.size === selectedSize)
   const conversion = selectedSize ? CONVERSION_TABLE[selectedSize] : null
+
+  // Keep pxPerMmRef in sync with pxPerMm
+  useEffect(() => {
+    pxPerMmRef.current = pxPerMm
+  }, [pxPerMm])
 
   // Effective scale combines the base pxPerMm with the user's real-time slider
   const effectivePxPerMm = pxPerMm * (scaleSlider / 100)
 
   const pxForMm = (mm: number) => mm * effectivePxPerMm
 
-  // When scaleSlider changes, we update the base scale after a debounce (handled via useEffect)
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (scaleSlider !== 100) {
-        onScaleChange(pxPerMm * (scaleSlider / 100))
-        setScaleSlider(100)
-      }
-    }, 500)
-    return () => clearTimeout(timeout)
-  }, [scaleSlider, pxPerMm, onScaleChange])
+  // Update base scale immediately when slider changes, but limit to reasonable range
+  const handleScaleChange = (val: number) => {
+    // Limit to 30%-170% to prevent extreme scaling
+    const clamped = Math.max(30, Math.min(170, val))
+    setScaleSlider(clamped)
+    isDraggingRef.current = true
+  }
+
+  // Reset slider after user stops interacting (on mouseUp/touchEnd)
+  const handleScaleRelease = () => {
+    if (isDraggingRef.current && scaleSlider !== 100) {
+      // Calculate new scale and update
+      const newScale = pxPerMmRef.current * (scaleSlider / 100)
+      onScaleChange(newScale)
+      setScaleSlider(100)
+      isDraggingRef.current = false
+    }
+  }
 
   return (
     <div>
@@ -516,10 +538,12 @@ function Measurement({
           <span className="text-sm font-medium text-stone-700 whitespace-nowrap">🔧 Scale:</span>
           <input
             type="range"
-            min={50}
-            max={150}
+            min={30}
+            max={170}
             value={scaleSlider}
-            onChange={(e) => setScaleSlider(Number(e.target.value))}
+            onChange={(e) => handleScaleChange(Number(e.target.value))}
+            onMouseUp={handleScaleRelease}
+            onTouchEnd={handleScaleRelease}
             className="flex-1 min-w-[120px] accent-amber-500"
           />
           <span className="text-sm font-mono text-stone-500 w-12 text-right">{scaleSlider}%</span>
