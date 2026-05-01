@@ -75,15 +75,7 @@ function Home() {
   const [pixelsPerCm, setPixelsPerCm] = useState<number | null>(null)
   const [selectedSize, setSelectedSize] = useState<number | null>(null)
 
-  useEffect(() => {
-    const saved = localStorage.getItem('ringSizerSeenTutorial')
-    if (saved === 'true') {
-      setStep('calibration')
-    }
-  }, [])
-
   const finishTutorial = () => {
-    localStorage.setItem('ringSizerSeenTutorial', 'true')
     setStep('calibration')
   }
 

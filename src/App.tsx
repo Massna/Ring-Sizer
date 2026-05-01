@@ -100,9 +100,6 @@ function estimatePPI(): number {
 }
 
 function getInitialScale(): number {
-  const saved = localStorage.getItem('ringSizerScale')
-  if (saved) return parseFloat(saved)
-
   const ppi = estimatePPI()
   // pixels per mm = PPI / 25.4
   const pxPerMm = ppi / 25.4
@@ -118,25 +115,7 @@ export default function App() {
   const [selectedSize, setSelectedSize] = useState<number | null>(null)
   const [showCalibrate, setShowCalibrate] = useState(false)
 
-  useEffect(() => {
-    const savedTutorial = localStorage.getItem('ringSizerSeenTutorial')
-    if (savedTutorial === 'true') {
-      setStep('measurement')
-    }
-  }, [])
-
-  // Only save to localStorage if the value changed significantly (prevents noise)
-  const prevPxPerMmRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (prevPxPerMmRef.current !== null && Math.abs(pxPerMm - prevPxPerMmRef.current) < 0.001) {
-      return
-    }
-    localStorage.setItem('ringSizerScale', pxPerMm.toString())
-    prevPxPerMmRef.current = pxPerMm
-  }, [pxPerMm])
-
   const finishTutorial = () => {
-    localStorage.setItem('ringSizerSeenTutorial', 'true')
     setStep('measurement')
   }
 
