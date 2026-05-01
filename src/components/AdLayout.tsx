@@ -1,4 +1,5 @@
 import SideAd from './SideAd'
+import FooterAd from './FooterAd'
 
 interface AdLayoutProps {
   children: React.ReactNode
@@ -28,10 +29,7 @@ export default function AdLayout({ children }: AdLayoutProps) {
 
       {/* Footer ad */}
       <footer className="flex justify-center py-6 px-4">
-        <div
-          id="container-32d6b114e43f968c75084eb22df14ef7"
-          className="w-full max-w-2xl min-h-[90px]"
-        />
+        <FooterAd />
       </footer>
     </div>
   )

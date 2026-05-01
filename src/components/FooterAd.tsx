@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
 
-const AD_KEY = '92bab807f48e4872f2e5127761fc18fb'
-const AD_WIDTH = 160
-const AD_HEIGHT = 600
+const AD_KEY = '397c3686d98bdbd9a1c597b017b80792'
+const AD_WIDTH = 300
+const AD_HEIGHT = 250
 
-interface SideAdProps {
+interface FooterAdProps {
   className?: string
 }
 
-export default function SideAd({ className = '' }: SideAdProps) {
+export default function FooterAd({ className = '' }: FooterAdProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
