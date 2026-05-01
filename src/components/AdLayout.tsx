@@ -12,7 +12,7 @@ export default function AdLayout({ children }: AdLayoutProps) {
         {/* Left ad sidebar */}
         <aside className="hidden lg:flex flex-col shrink-0 px-2 py-6">
           <div className="sticky top-6">
-            <SideAd />
+            <SideAd key="left" />
           </div>
         </aside>
 
@@ -22,7 +22,7 @@ export default function AdLayout({ children }: AdLayoutProps) {
         {/* Right ad sidebar */}
         <aside className="hidden lg:flex flex-col shrink-0 px-2 py-6">
           <div className="sticky top-6">
-            <SideAd />
+            <SideAd key="right" />
           </div>
         </aside>
       </div>
