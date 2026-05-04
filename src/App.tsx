@@ -119,7 +119,20 @@ type Step = 'tutorial' | 'measurement'
 export default function App() {
   const [step, setStep] = useState<Step>('tutorial')
   const [tutorialPage, setTutorialPage] = useState(0)
-  const [pxPerMm, setPxPerMm] = useState<number>(getInitialScale())
+  const [pxPerMm, setPxPerMmState] = useState<number>(() => {
+    const saved = localStorage.getItem('ringSizerPxPerMm')
+    if (saved) {
+      const parsed = parseFloat(saved)
+      if (!isNaN(parsed) && parsed > 0) return parsed
+    }
+    return getInitialScale()
+  })
+
+  const setPxPerMm = (newVal: number) => {
+    setPxPerMmState(newVal)
+    localStorage.setItem('ringSizerPxPerMm', newVal.toString())
+  }
+
   const [selectedSize, setSelectedSize] = useState<number | null>(null)
   const [showCalibrate, setShowCalibrate] = useState(false)
 
