@@ -509,99 +509,53 @@ function Calibration({
 
 function Measurement({
   pxPerMm,
-  onScaleChange,
   selectedSize,
   onSelectSize,
   onOpenCalibrate,
 }: {
   pxPerMm: number
-  onScaleChange: (v: number) => void
   selectedSize: number | null
   onSelectSize: (size: number) => void
   onOpenCalibrate: () => void
 }) {
-  const [displayMode, setDisplayMode] = useState<'grid' | 'single'>('grid')
-  const [currentIndex, setCurrentIndex] = useState(12)
-  const [showTable, setShowTable] = useState(false)
-  const [scaleSlider, setScaleSlider] = useState(100)
-  const pxPerMmRef = useRef(pxPerMm)
-  const isDraggingRef = useRef(false)
+  const [displayMode, setDisplayMode] = useState<'grid' | 'single'>('single')
 
-  const selectedRing = RING_SIZES.find((r) => r.size === selectedSize)
-  const conversion = selectedSize ? CONVERSION_TABLE[selectedSize] : null
+  // Find index of selected size, default to index 8 (Size 18)
+  const currentIndex = selectedSize
+    ? RING_SIZES.findIndex((r) => r.size === selectedSize)
+    : 8
 
-  // Keep pxPerMmRef in sync with pxPerMm
-  useEffect(() => {
-    pxPerMmRef.current = pxPerMm
-  }, [pxPerMm])
+  const pxForMm = (mm: number) => mm * pxPerMm
 
-  // Effective scale combines the base pxPerMm with the user's real-time slider
-  const effectivePxPerMm = pxPerMm * (scaleSlider / 100)
-
-  const pxForMm = (mm: number) => mm * effectivePxPerMm
-
-  // Update base scale immediately when slider changes, but limit to reasonable range
-  const handleScaleChange = (val: number) => {
-    // Limit to 30%-170% to prevent extreme scaling
-    const clamped = Math.max(30, Math.min(170, val))
-    setScaleSlider(clamped)
-    isDraggingRef.current = true
-  }
-
-  // Reset slider after user stops interacting (on mouseUp/touchEnd)
-  const handleScaleRelease = () => {
-    if (isDraggingRef.current && scaleSlider !== 100) {
-      // Calculate new scale and update
-      const newScale = pxPerMmRef.current * (scaleSlider / 100)
-      onScaleChange(newScale)
-      setScaleSlider(100)
-      isDraggingRef.current = false
-    }
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newIndex = Number(e.target.value)
+    onSelectSize(RING_SIZES[newIndex].size)
   }
 
   return (
     <div>
-      {/* Scale fine-tune bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 mb-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-stone-700 whitespace-nowrap">
-            🔧 Scale:
-          </span>
-          <input
-            type="range"
-            min={30}
-            max={170}
-            value={scaleSlider}
-            onChange={(e) => handleScaleChange(Number(e.target.value))}
-            onMouseUp={handleScaleRelease}
-            onTouchEnd={handleScaleRelease}
-            className="flex-1 min-w-[120px] accent-amber-500"
-          />
-          <span className="text-sm font-mono text-stone-500 w-12 text-right">
-            {scaleSlider}%
-          </span>
-          <button
-            onClick={onOpenCalibrate}
-            className="px-3 py-1.5 rounded-lg bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition-colors whitespace-nowrap"
-          >
-            Calibrate
-          </button>
-        </div>
-        <p className="text-xs text-stone-400 mt-2">
-          If circles look too small or big, adjust above. For best accuracy, use
-          Calibrate with a credit card.
+      {/* Calibrate Alert */}
+      <div className="bg-amber-50 rounded-2xl shadow-sm border border-amber-200 p-4 mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <p className="text-sm text-amber-800 font-medium">
+          Is the size looking weird on your screen?
         </p>
+        <button
+          onClick={onOpenCalibrate}
+          className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors whitespace-nowrap shadow-sm"
+        >
+          💳 Calibrate Screen
+        </button>
       </div>
 
       {/* Measurement circles */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h2 className="text-2xl font-bold text-stone-900">
               Measure Your Finger
             </h2>
             <p className="text-stone-500 text-sm">
-              Tap the circle that fits your finger perfectly.
+              Tap or slide to find the perfect fit.
             </p>
           </div>
           <div className="flex gap-2">
@@ -669,23 +623,34 @@ function Measurement({
           </div>
         ) : (
           <div className="flex flex-col items-center">
+            {/* New Ring Size Slider! */}
+            <div className="w-full max-w-sm mb-8 px-4">
+              <label className="flex justify-between text-sm font-medium text-stone-700 mb-3">
+                <span>Smaller</span>
+                <span className="font-bold text-amber-600">Size {RING_SIZES[currentIndex]?.size}</span>
+                <span>Larger</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={RING_SIZES.length - 1}
+                value={currentIndex}
+                onChange={handleSliderChange}
+                className="w-full accent-amber-500"
+              />
+            </div>
+
             <div className="mb-6 flex items-center gap-4">
               <button
-                onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                onClick={() => handleSliderChange({ target: { value: String(currentIndex - 1) } } as any)}
                 disabled={currentIndex === 0}
                 className="w-10 h-10 rounded-full bg-stone-100 text-stone-700 font-bold hover:bg-stone-200 disabled:opacity-30 transition-colors"
               >
                 ←
               </button>
-              <span className="text-sm font-medium text-stone-500 w-24 text-center">
-                Size {RING_SIZES[currentIndex]?.size}
-              </span>
+              
               <button
-                onClick={() =>
-                  setCurrentIndex(
-                    Math.min(RING_SIZES.length - 1, currentIndex + 1),
-                  )
-                }
+                onClick={() => handleSliderChange({ target: { value: String(currentIndex + 1) } } as any)}
                 disabled={currentIndex === RING_SIZES.length - 1}
                 className="w-10 h-10 rounded-full bg-stone-100 text-stone-700 font-bold hover:bg-stone-200 disabled:opacity-30 transition-colors"
               >
@@ -696,15 +661,10 @@ function Measurement({
             {(() => {
               const ring = RING_SIZES[currentIndex]
               const px = pxForMm(ring.diam)
-              const isSelected = selectedSize === ring.size
+              // Since currentIndex is always synced with selectedSize now, it's always "selected"
               return (
-                <button
-                  onClick={() => onSelectSize(ring.size)}
-                  className={`flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all ${
-                    isSelected
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'
-                  }`}
+                <div
+                  className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-amber-500 bg-amber-50 transition-all"
                 >
                   <div
                     style={{
@@ -713,23 +673,17 @@ function Measurement({
                       minWidth: '40px',
                       minHeight: '40px',
                     }}
-                    className={`rounded-full border-[3px] ${
-                      isSelected ? 'border-amber-500' : 'border-stone-500'
-                    }`}
+                    className="rounded-full border-[3px] border-amber-500"
                   />
                   <div className="text-center">
-                    <span
-                      className={`text-2xl font-bold ${
-                        isSelected ? 'text-amber-700' : 'text-stone-800'
-                      }`}
-                    >
+                    <span className="text-2xl font-bold text-amber-700">
                       {ring.size}
                     </span>
                     <p className="text-xs text-stone-400 mt-1">
                       {ring.diam.toFixed(1)} mm Ø
                     </p>
                   </div>
-                </button>
+                </div>
               )
             })()}
           </div>
@@ -737,63 +691,70 @@ function Measurement({
       </div>
 
       {/* Result card */}
-      {selectedRing && conversion && (
-        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 md:p-8 mb-6">
-          <h3 className="text-lg font-bold text-amber-900 mb-4">
-            🎉 Your size is: {selectedRing.size}
-          </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm text-amber-800 mb-4">
-            <div>
-              <span className="text-amber-600">Inner Diameter:</span>
-              <p className="font-semibold">{selectedRing.diam.toFixed(1)} mm</p>
-            </div>
-            <div>
-              <span className="text-amber-600">Circumference:</span>
-              <p className="font-semibold">{selectedRing.circ.toFixed(1)} mm</p>
-            </div>
-          </div>
+      {(() => {
+        const selectedRing = RING_SIZES.find((r) => r.size === selectedSize)
+        const conversion = selectedSize ? CONVERSION_TABLE[selectedSize] : null
 
-          <div className="border-t border-amber-200 pt-4">
-            <p className="text-sm font-semibold text-amber-900 mb-2">
-              International Sizes
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-              <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">
-                  US / CA
-                </p>
-                <p className="text-amber-900 font-bold text-lg">
-                  {conversion.us}
-                </p>
+        if (!selectedRing || !conversion) return null;
+
+        return (
+          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 md:p-8 mb-6">
+            <h3 className="text-lg font-bold text-amber-900 mb-4">
+              🎉 Your size is: {selectedRing.size}
+            </h3>
+            <div className="grid grid-cols-2 gap-4 text-sm text-amber-800 mb-4">
+              <div>
+                <span className="text-amber-600">Inner Diameter:</span>
+                <p className="font-semibold">{selectedRing.diam.toFixed(1)} mm</p>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">
-                  UK / AU
-                </p>
-                <p className="text-amber-900 font-bold text-lg">
-                  {conversion.uk}
-                </p>
+              <div>
+                <span className="text-amber-600">Circumference:</span>
+                <p className="font-semibold">{selectedRing.circ.toFixed(1)} mm</p>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">
-                  EU
-                </p>
-                <p className="text-amber-900 font-bold text-lg">
-                  {conversion.eu}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
-                <p className="text-amber-500 text-xs font-medium uppercase">
-                  JP / CN
-                </p>
-                <p className="text-amber-900 font-bold text-lg">
-                  {conversion.jp}
-                </p>
+            </div>
+
+            <div className="border-t border-amber-200 pt-4">
+              <p className="text-sm font-semibold text-amber-900 mb-2">
+                International Sizes
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
+                  <p className="text-amber-500 text-xs font-medium uppercase">
+                    US / CA
+                  </p>
+                  <p className="text-amber-900 font-bold text-lg">
+                    {conversion.us}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
+                  <p className="text-amber-500 text-xs font-medium uppercase">
+                    UK / AU
+                  </p>
+                  <p className="text-amber-900 font-bold text-lg">
+                    {conversion.uk}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
+                  <p className="text-amber-500 text-xs font-medium uppercase">
+                    EU
+                  </p>
+                  <p className="text-amber-900 font-bold text-lg">
+                    {conversion.eu}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-amber-100 text-center">
+                  <p className="text-amber-500 text-xs font-medium uppercase">
+                    JP / CN
+                  </p>
+                  <p className="text-amber-900 font-bold text-lg">
+                    {conversion.jp}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Full conversion table */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8 mb-6">
