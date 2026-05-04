@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import AdLayout from './components/AdLayout'
 
 // Brazilian ring sizes — proper diameters (mm) and circumferences (mm)
@@ -172,7 +172,6 @@ export default function App() {
             )}
             <Measurement
               pxPerMm={pxPerMm}
-              onScaleChange={setPxPerMm}
               selectedSize={selectedSize}
               onSelectSize={setSelectedSize}
               onOpenCalibrate={() => setShowCalibrate(true)}
@@ -519,6 +518,7 @@ function Measurement({
   onOpenCalibrate: () => void
 }) {
   const [displayMode, setDisplayMode] = useState<'grid' | 'single'>('single')
+  const [showTable, setShowTable] = useState(false)
 
   // Find index of selected size, default to index 8 (Size 18)
   const currentIndex = selectedSize
