@@ -80,10 +80,10 @@ function estimatePPI(): number {
   if (/Android/.test(ua)) {
     // Small screens = phone
     if (Math.min(sw, sh) < 600) {
-      if (dpr >= 3.5) return 520
-      if (dpr >= 3) return 400
-      if (dpr >= 2.5) return 360
-      if (dpr === 2) return 300
+      if (dpr >= 3.5) return 500
+      if (dpr >= 3) return 450 // Modern flagships
+      if (dpr >= 2.5) return 400 // Modern mid-range
+      if (dpr >= 2) return 320 
       return 240
     }
     // Larger screens = tablet
@@ -109,8 +109,10 @@ function estimatePPI(): number {
 
 function getInitialScale(): number {
   const ppi = estimatePPI()
-  const pxPerMm = ppi / 25.4
-  return pxPerMm
+  const physicalPxPerMm = ppi / 25.4
+  // É obrigatorio dividir pelo devicePixelRatio, senao fica 3x maior!
+  const cssPxPerMm = physicalPxPerMm / (window.devicePixelRatio || 1)
+  return cssPxPerMm
 }
 
 type Step = 'tutorial' | 'measurement'
