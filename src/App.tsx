@@ -109,11 +109,8 @@ function estimatePPI(): number {
 
 function getInitialScale(): number {
   const ppi = estimatePPI()
-  // Pixels físicos por milímetro
-  const physicalPxPerMm = ppi / 25.4
-  // Como o CSS usa pixels lógicos, precisamos dividir pelo devicePixelRatio
-  const cssPxPerMm = physicalPxPerMm / (window.devicePixelRatio || 1)
-  return cssPxPerMm
+  const pxPerMm = ppi / 25.4
+  return pxPerMm
 }
 
 type Step = 'tutorial' | 'measurement'
