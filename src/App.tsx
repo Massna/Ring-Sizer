@@ -50,54 +50,51 @@ function estimatePPI(): number {
   const sw = window.screen.width
   const sh = window.screen.height
 
-  // iPhones — known PPI values by model range
+  const physicalW = sw * dpr
+  const physicalH = sh * dpr
+  const diagonalPx = Math.sqrt(physicalW * physicalW + physicalH * physicalH)
+
+  // iPhones — Apple values are very standard
   if (/iPhone/.test(ua)) {
     if (dpr === 3) {
-      // iPhone 12/13/14/15/16 Pro/Pro Max, XS/X/11 Pro
       if (sw === 430 || sw === 393) return 460 // Pro Max, Pro
-      if (sw === 390) return 476 // iPhone 12/13 mini
+      if (sw === 390) return 476 // mini
       return 460
     }
     if (dpr === 2) {
-      // iPhone SE, XR, 11, older
-      if (sw === 414) return 326 // iPhone XR/11
-      if (sw === 375) return 326 // iPhone SE (2nd/3rd), 8, etc.
-      return 326
+      if (sw === 414 || sw === 375) return 326
     }
     return 326
   }
 
   // iPads
-  if (
-    /iPad/.test(ua) ||
-    (sw === 1024 && dpr === 2) ||
-    (sw === 834 && dpr === 2)
-  ) {
-    return 264
+  const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  if (isIPad) {
+    if (diagonalPx < 2000) return 326 // iPad Mini
+    return 264 // All other iPads
   }
 
-  // Android phones
-  if (/Android/.test(ua)) {
-    // Small screens = phone
-    if (Math.min(sw, sh) < 600) {
-      if (dpr >= 3.5) return 500
-      if (dpr >= 3) return 450 // Modern flagships
-      if (dpr >= 2.5) return 400 // Modern mid-range
-      if (dpr >= 2) return 320 
-      return 240
-    }
-    // Larger screens = tablet
-    if (Math.min(sw, sh) < 900) {
-      return 264
-    }
+  // Android Tablets (Android sem a tag "Mobile" no navegador)
+  const isAndroidTablet = /Android/i.test(ua) && !/Mobile/i.test(ua)
+  if (isAndroidTablet) {
+    let assumedDiagonal = 10.5
+    if (diagonalPx > 2800) assumedDiagonal = 12.0
+    else if (diagonalPx < 2000) assumedDiagonal = 8.5
+    return diagonalPx / assumedDiagonal
+  }
+
+  // Android Phones (Android com a tag "Mobile")
+  if (/Android/i.test(ua) && /Mobile/i.test(ua)) {
+    let assumedDiagonal = 6.4
+    if (diagonalPx > 2800) assumedDiagonal = 6.8
+    else if (diagonalPx < 2000) assumedDiagonal = 5.5
+    return diagonalPx / assumedDiagonal
   }
 
   // Desktop / laptop
   if (dpr === 1) return 96
   if (dpr === 2) {
-    // Retina Macs
     if (/Mac/.test(ua)) {
-      // 13-inch MacBook Air/Pro = 227 PPI, 14/16-inch = 254 PPI
       if (sw >= 1512) return 254
       return 227
     }
